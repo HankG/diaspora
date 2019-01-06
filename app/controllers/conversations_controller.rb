@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 class ConversationsController < ApplicationController
   before_action :authenticate_user!
   respond_to :html, :mobile, :json, :js
@@ -39,7 +41,7 @@ class ConversationsController < ApplicationController
     end
 
     unless person_ids.present?
-      render text: I18n.t("javascripts.conversation.create.no_recipient"), status: 422
+      render plain: I18n.t("javascripts.conversation.create.no_recipient"), status: 422
       return
     end
 
@@ -53,7 +55,7 @@ class ConversationsController < ApplicationController
       flash[:notice] = I18n.t("conversations.create.sent")
       render json: {id: @conversation.id}
     else
-      render text: I18n.t("conversations.create.fail"), status: 422
+      render plain: I18n.t("conversations.create.fail"), status: 422
     end
   end
 
@@ -82,7 +84,7 @@ class ConversationsController < ApplicationController
       @conversation.set_read(current_user)
       render partial: "conversations/show", locals: {conversation: @conversation}
     else
-      render nothing: true, status: 404
+      head :not_found
     end
   end
 
@@ -103,12 +105,6 @@ class ConversationsController < ApplicationController
 
       render :layout => true
     else
-      if params[:contact_id]
-        gon.push conversation_prefill: [current_user.contacts.find(params[:contact_id]).person.as_json]
-      elsif params[:aspect_id]
-        gon.push conversation_prefill: current_user.aspects
-                                                   .find(params[:aspect_id]).contacts.map {|c| c.person.as_json }
-      end
       render :layout => false
     end
   end

@@ -34,35 +34,6 @@ describe("app.pages.Contacts", function(){
     });
   });
 
-  context('toggle contacts visibility', function() {
-    beforeEach(function() {
-      this.visibilityToggle = $("#contacts_visibility_toggle");
-      this.lockIcon = $("#contacts_visibility_toggle i");
-    });
-
-    it("updates the title for the tooltip", function() {
-      expect(this.lockIcon.attr("data-original-title")).toBe(
-        Diaspora.I18n.t("contacts.aspect_list_is_visible")
-      );
-
-      this.visibilityToggle.trigger("click");
-
-      expect(this.lockIcon.attr("data-original-title")).toBe(
-        Diaspora.I18n.t("contacts.aspect_list_is_not_visible")
-      );
-    });
-
-    it("toggles the lock icon", function() {
-      expect(this.lockIcon.hasClass("entypo-lock-open")).toBeTruthy();
-      expect(this.lockIcon.hasClass("entypo-lock")).toBeFalsy();
-
-      this.visibilityToggle.trigger("click");
-
-      expect(this.lockIcon.hasClass("entypo-lock")).toBeTruthy();
-      expect(this.lockIcon.hasClass("entypo-lock-open")).toBeFalsy();
-    });
-  });
-
   context('show aspect name form', function() {
     beforeEach(function() {
       this.button = $('#change_aspect_name');
@@ -290,17 +261,17 @@ describe("app.pages.Contacts", function(){
     });
 
     it("initializes app.views.ConversationsForm with correct parameters when modal is loaded", function() {
-      gon.conversationPrefill = [
-        {id: 1, name: "diaspora user", handle: "diaspora-user@pod.tld"},
-        {id: 2, name: "other diaspora user", handle: "other-diaspora-user@pod.tld"},
-        {id: 3, name: "user@pod.tld", handle: "user@pod.tld"}
-      ];
-
       spyOn(app.views.ConversationsForm.prototype, "initialize");
+      app.aspect = new app.models.Aspect(app.contacts.first().get("aspect_memberships")[0].aspect);
       this.view.showMessageModal();
       $("#conversationModal").trigger("modal:loaded");
-      expect(app.views.ConversationsForm.prototype.initialize)
-        .toHaveBeenCalledWith({prefill: gon.conversationPrefill});
+      expect(app.views.ConversationsForm.prototype.initialize).toHaveBeenCalled();
+
+      var prefill = app.views.ConversationsForm.prototype.initialize.calls.mostRecent().args[0].prefill;
+      var contacts = app.contacts.filter(function(contact) {
+        return contact.person.get("relationship") === "mutual" && contact.inAspect(app.aspect.get("id"));
+      });
+      expect(_.pluck(prefill, "id")).toEqual(contacts.map(function(contact) { return contact.person.id; }));
     });
   });
 });

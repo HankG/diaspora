@@ -1,4 +1,6 @@
-class Pod < ActiveRecord::Base
+# frozen_string_literal: true
+
+class Pod < ApplicationRecord
   enum status: %i(
     unchecked
     no_errors

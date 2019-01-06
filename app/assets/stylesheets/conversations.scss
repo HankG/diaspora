@@ -65,7 +65,7 @@
 
     &:hover:not(.selected), &.selected {
       .subject,
-      .last_author,
+      .last-author,
       .last_message {
         color: $white;
       }
@@ -73,7 +73,7 @@
     }
 
     &:hover, &.unread:hover, &.selected:hover {
-      background-color: lighten($blue,5%);
+      background-color: lighten($brand-primary, 5%);
       cursor: pointer;
       .participants {
         border-color: rgba($border-grey, 1);
@@ -84,16 +84,16 @@
     }
 
     &.unread { background-color: $background-grey; }
-    &.selected { background-color: $blue; }
+    &.selected { background-color: $brand-primary; }
 
-    .last_author, .last_message {
+    .last-author, .last_message {
       font-size: 12px;
       line-height: 15px;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .last_author { color: $text-dark-grey; }
+    .last-author { color: $text-dark-grey; }
 
     .message-count, .unread-message-count {
       margin-left: 3px;
@@ -144,11 +144,11 @@
       float: right;
       line-height: normal;
       font-weight: normal;
-      color: $blue;
+      color: $link-color;
     }
   }
 
-  .stream_container .conversation-participants {
+  .stream-container .conversation-participants {
     margin-bottom: 20px;
 
     .hide_conversation, .delete_conversation {
@@ -197,16 +197,14 @@
 }
 
 .recipients-tag-list {
+  margin: 0 -2px $form-group-margin-bottom;
+
   .conversation-recipient-tag {
     background-color: $brand-primary;
     border-radius: $btn-border-radius-base;
     display: inline-flex;
-    margin: 0 2px $form-group-margin-bottom;
-    padding: 8px;
-
-    &:first-child { margin-left: 0; }
-
-    &:last-child { margin-right: 0; }
+    margin: 0 2px;
+    padding: $btn-border-radius-base;
 
     div {
       align-self: center;
@@ -215,9 +213,9 @@
   }
 
   .avatar {
-    height: 40px;
+    height: 35px;
     margin-right: 8px;
-    width: 40px;
+    width: 35px;
   }
 
   .name-and-handle {
@@ -240,3 +238,9 @@
 }
 
 .new-conversation.form-horizontal .form-group:last-of-type { margin-bottom: 0; }
+
+// This rule is required until we switch to the newer release of bootstrap-markdown with
+// the following commit in: https://github.com/toopay/bootstrap-markdown/commit/14a21c3837140144b27efc19c795d1a37fad70fb
+.conversations-form-container .md-preview {
+  min-height: 105px;
+}

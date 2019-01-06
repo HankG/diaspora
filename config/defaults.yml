@@ -4,7 +4,7 @@
 
 defaults:
   version:
-    number: "0.6.99.0" # Do not touch unless doing a release, do not backport the version number that's in master
+    number: "0.7.99.0" # Do not touch unless doing a release, do not backport the version number that's in master
   heroku: false
   environment:
     url: "http://localhost:3000/"
@@ -79,8 +79,6 @@ defaults:
       enable: false
       host:
       site_id:
-    mixpanel_uid:
-    chartbeat_uid:
     statistics:
       user_counts: false
       post_counts: false
@@ -108,6 +106,7 @@ defaults:
       currency: USD
       paypal_hosted_button_id:
       paypal_unhosted_button_encrypted:
+    liberapay_username:
     bitcoin_address:
     bitcoin_wallet_id: # DEPRECATED: Remove with 0.6
     community_spotlight:
@@ -115,6 +114,7 @@ defaults:
       suggest_email:
     typhoeus_verbose: false
     typhoeus_concurrency: 20
+    export_concurrency: 1
     username_blacklist:
       - 'admin'
       - 'administrator'
@@ -153,15 +153,9 @@ defaults:
       title: 'diaspora* social network'
       description: 'diaspora* is the online social world where you are in control.'
     csp:
-      report_only: true
+      report_only: false
       report_uri:
   services:
-    facebook:
-      enable: false
-      app_id:
-      secret:
-      open_graph_namespace: 'joindiaspora'
-      authorized: false
     twitter:
       enable: false
       key:
@@ -237,11 +231,10 @@ test:
     invitations:
       open: true
   services:
-    facebook:
+    twitter:
       enable: true
-      app_id: 'fake'
+      key: 'fake'
       secret: 'sdoigjosdfijg'
-      authorized: true
   mail:
     enable: true
 integration1:

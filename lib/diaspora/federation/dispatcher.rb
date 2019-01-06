@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Diaspora
   module Federation
     class Dispatcher
@@ -30,6 +32,16 @@ module Diaspora
       private
 
       attr_reader :sender, :object, :opts
+
+      def entity
+        @entity ||= Entities.build(object)
+      end
+
+      def magic_envelope
+        @magic_envelope ||= DiasporaFederation::Salmon::MagicEnvelope.new(
+          entity, sender.diaspora_handle
+        ).envelop(sender.encryption_key)
+      end
 
       def deliver_to_services
         deliver_to_user_services if opts[:service_types]

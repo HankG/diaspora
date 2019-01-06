@@ -1,14 +1,16 @@
+# frozen_string_literal: true
+
 When /^I focus the comment field$/ do
   focus_comment_box
 end
 
 Then /^the first comment field should be open/ do
-  find("#main_stream .stream-element .new_comment").should be_visible
+  find("#main-stream .stream-element .new-comment").should be_visible
 end
 
 Then /^the first comment field should be closed$/ do
   page.should have_css(".stream-element .media")
-  page.should_not have_selector("#main_stream .stream-element .new_comment", match: :first)
+  page.should_not have_selector("#main-stream .stream-element .new-comment", match: :first)
 end
 
 When /^I make a show page comment "([^"]*)"$/ do |comment_text|
@@ -37,4 +39,8 @@ Given /^"([^"]*)" has commented a lot on "([^"]*)"$/ do |email, post_text|
       user.comment!(post, "Comment #{n}")
     end
   end
+end
+
+When /^I enter "([^"]*)" in the comment field$/ do |comment_text|
+  find("textarea.comment-box.mention-textarea").native.send_keys(comment_text)
 end

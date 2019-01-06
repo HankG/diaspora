@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #   Copyright (c) 2010-2011, Diaspora Inc.  This file is
 #   licensed under the Affero General Public License version 3 or later.  See
 #   the COPYRIGHT file.
@@ -46,7 +48,7 @@ class UsersController < ApplicationController
       flash[:error] = t("users.update.settings_not_updated")
     end
 
-    redirect_to :back
+    redirect_back fallback_location: privacy_settings_path
   end
 
   def destroy
@@ -60,7 +62,7 @@ class UsersController < ApplicationController
       else
         flash[:error] = t "users.destroy.no_password"
       end
-      redirect_to :back
+      redirect_back fallback_location: edit_user_path
     end
   end
 
@@ -211,15 +213,23 @@ class UsersController < ApplicationController
   end
 
   def change_email(user_data)
-    @user.unconfirmed_email = user_data[:email]
-    if @user.save
-      @user.send_confirm_email
-      if @user.unconfirmed_email
+    if AppConfig.mail.enable?
+      @user.unconfirmed_email = user_data[:email]
+      if @user.save
+        @user.send_confirm_email
         flash.now[:notice] = t("users.update.unconfirmed_email_changed")
+      else
+        @user.reload # match user object with the database
+        flash.now[:error] = t("users.update.unconfirmed_email_not_changed")
       end
     else
-      @user.reload # match user object with the database
-      flash.now[:error] = t("users.update.unconfirmed_email_not_changed")
+      @user.email = user_data[:email]
+      if @user.save
+        flash.now[:notice] = t("users.update.settings_updated")
+      else
+        @user.reload
+        flash.now[:error] = t("users.update.unconfirmed_email_not_changed")
+      end
     end
   end
 

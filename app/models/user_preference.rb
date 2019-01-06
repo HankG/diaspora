@@ -1,4 +1,6 @@
-class UserPreference < ActiveRecord::Base
+# frozen_string_literal: true
+
+class UserPreference < ApplicationRecord
   belongs_to :user
 
   validate :must_be_valid_email_type
@@ -12,7 +14,8 @@ class UserPreference < ActiveRecord::Base
      "started_sharing",
      "also_commented",
      "liked",
-     "reshared"]
+     "reshared",
+     "contacts_birthday"]
 
   def must_be_valid_email_type
     unless VALID_EMAIL_TYPES.include?(self.email_type)

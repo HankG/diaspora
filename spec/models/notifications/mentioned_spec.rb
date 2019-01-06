@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Notifications::Mentioned do
   class TestNotification < Notification
     include Notifications::Mentioned
@@ -14,7 +16,7 @@ describe Notifications::Mentioned do
 
     it "calls filter_mentions on self" do
       expect(TestNotification).to receive(:filter_mentions).with(
-        Mention.where(mentions_container: status_message, person: [alice, bob].map(&:person)),
+        match_array(Mention.where(mentions_container: status_message, person: [alice, bob].map(&:person))),
         status_message,
         [alice.id, bob.id]
       ).and_return([])
@@ -46,6 +48,18 @@ describe Notifications::Mentioned do
 
     it "doesn't create notification if it was filtered out by filter_mentions" do
       expect(TestNotification).to receive(:filter_mentions).and_return([])
+      expect(TestNotification).not_to receive(:create_notification)
+      TestNotification.notify(status_message, nil)
+    end
+
+    it "doesn't create notification if it already exists" do
+      status_message = FactoryGirl.create(:status_message, text: text_mentioning(alice), author: eve.person)
+      TestNotification.create(
+        recipient: alice,
+        target:    Mention.where(mentions_container: status_message, person: alice.person_id).first,
+        actors:    [status_message.author]
+      )
+
       expect(TestNotification).not_to receive(:create_notification)
       TestNotification.notify(status_message, nil)
     end

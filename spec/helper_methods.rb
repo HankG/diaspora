@@ -1,4 +1,6 @@
 
+# frozen_string_literal: true
+
 require Rails.root.join("spec", "support", "inlined_jobs")
 
 module HelperMethods
@@ -27,12 +29,12 @@ module HelperMethods
     File.open(fixture_name)
   end
 
-  def create_conversation_with_message(sender, recipient_person, subject, text)
+  def create_conversation_with_message(sender_person, recipient_person, subject, text)
     create_hash = {
-      :author => sender.person,
-      :participant_ids => [sender.person.id, recipient_person.id],
-      :subject => subject,
-      :messages_attributes => [ {:author => sender.person, :text => text} ]
+      author:              sender_person,
+      participant_ids:     [sender_person.id, recipient_person.id],
+      subject:             subject,
+      messages_attributes: [{author: sender_person, text: text}]
     }
 
     Conversation.create!(create_hash)
@@ -47,15 +49,15 @@ module HelperMethods
 
   def text_mentioning(*people)
     people.map {|person|
-      "this is a text mentioning @{#{person.name}; #{person.diaspora_handle}} ... have fun testing!"
+      "this is a text mentioning @{#{person.diaspora_handle}} ... have fun testing!"
     }.join(" ")
   end
 
-  def build_relayable_federation_entity(type, data={}, additional_xml_elements={})
-    attributes = FactoryGirl.attributes_for("#{type}_entity".to_sym, data)
-    entity_class = "DiasporaFederation::Entities::#{type.capitalize}".constantize
-    signable_fields = attributes.keys - [:author_signature]
+  def build_relayable_federation_entity(type, data={}, additional_data={})
+    attributes = Fabricate.attributes_for("#{type}_entity".to_sym, data)
+    entity_class = "DiasporaFederation::Entities::#{type.to_s.camelize}".constantize
+    signable_fields = attributes.keys - %i[author_signature parent]
 
-    entity_class.new(attributes, [*signable_fields, *additional_xml_elements.keys], additional_xml_elements)
+    entity_class.new(attributes, [*signable_fields, *additional_data.keys], additional_data)
   end
 end

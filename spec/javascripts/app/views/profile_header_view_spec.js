@@ -4,8 +4,11 @@ describe("app.views.ProfileHeader", function() {
     this.model = factory.personWithProfile({
       diaspora_id: "my@pod",
       name: "User Name",
-      relationship: 'mutual',
-      profile: { tags: ['test'] }
+      relationship: "mutual",
+      profile: {
+        avatar: {small: "http://example.org/avatar.jpg"},
+        tags: ["test"]
+      }
     });
     this.view = new app.views.ProfileHeader({model: this.model});
     loginAs(factory.userAttrs());
@@ -61,7 +64,7 @@ describe("app.views.ProfileHeader", function() {
 
   describe("showMessageModal", function() {
     beforeEach(function() {
-      spec.content().append("<div id='conversationModal'/>");
+      spec.content().append("<div id='conversationModal' class='modal fade'><div class='modal-body'></div></div>");
     });
 
     it("calls app.helpers.showModal", function() {
@@ -71,17 +74,12 @@ describe("app.views.ProfileHeader", function() {
     });
 
     it("initializes app.views.ConversationsForm with correct parameters when modal is loaded", function() {
-      gon.conversationPrefill = [
-        {id: 1, name: "diaspora user", handle: "diaspora-user@pod.tld"},
-        {id: 2, name: "other diaspora user", handle: "other-diaspora-user@pod.tld"},
-        {id: 3, name: "user@pod.tld", handle: "user@pod.tld"}
-      ];
-
       spyOn(app.views.ConversationsForm.prototype, "initialize");
+      spyOn($.fn, "load").and.callFake(function(url, callback) { callback(); });
       this.view.showMessageModal();
-      $("#conversationModal").trigger("modal:loaded");
-      expect(app.views.ConversationsForm.prototype.initialize)
-        .toHaveBeenCalledWith({prefill: gon.conversationPrefill});
+      expect(app.views.ConversationsForm.prototype.initialize).toHaveBeenCalledWith({
+        prefill: [this.model]
+      });
     });
   });
 });

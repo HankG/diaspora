@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe StatusMessageCreationService do
   describe "#create" do
     let(:aspect) { alice.aspects.first }
@@ -26,6 +28,13 @@ describe StatusMessageCreationService do
       it "does not create aspect_visibilities if the post is public" do
         status_message = StatusMessageCreationService.new(alice).create(params.merge(public: true))
         expect(status_message.aspect_visibilities).to be_empty
+      end
+
+      it "raises exception if aspects_ids don't contain any applicable aspect identifiers" do
+        bad_ids = [Aspect.ids.max.next, bob.aspects.first.id].map(&:to_s)
+        expect {
+          StatusMessageCreationService.new(alice).create(params.merge(aspect_ids: bad_ids))
+        }.to remain(StatusMessage, :count).and raise_error(StatusMessageCreationService::BadAspectsIDs)
       end
     end
 
@@ -160,8 +169,8 @@ describe StatusMessageCreationService do
       it "dispatches the StatusMessage to services" do
         expect(alice).to receive(:dispatch_post)
           .with(instance_of(StatusMessage),
-                hash_including(service_types: array_including(%w(Services::Facebook Services::Twitter))))
-        StatusMessageCreationService.new(alice).create(params.merge(services: %w(twitter facebook)))
+                hash_including(service_types: array_including(%w[Services::Tumblr Services::Twitter])))
+        StatusMessageCreationService.new(alice).create(params.merge(services: %w[twitter tumblr]))
       end
 
       context "with mention" do

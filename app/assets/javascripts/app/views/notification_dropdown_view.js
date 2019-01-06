@@ -12,7 +12,7 @@ app.views.NotificationDropdown = app.views.Base.extend({
     this.dropdown = $("#notification-dropdown");
     this.dropdownNotifications = this.dropdown.find(".notifications");
     this.ajaxLoader = this.dropdown.find(".ajax-loader");
-    this.perfectScrollbarInitialized = false;
+    this.perfectScrollbar = null;
     this.dropdownNotifications.scroll(this.dropdownScroll.bind(this));
     this.bindCollectionEvents();
   },
@@ -21,11 +21,11 @@ app.views.NotificationDropdown = app.views.Base.extend({
     this.collection.on("pushFront", this.onPushFront.bind(this));
     this.collection.on("pushBack", this.onPushBack.bind(this));
     this.collection.on("finishedLoading", this.finishLoading.bind(this));
+    this.collection.on("change:note_html", this.onNotificationChange.bind(this));
   },
 
   toggleDropdown: function(evt){
     evt.stopPropagation();
-    if (!$("#notifications-link .entypo-bell:visible").length) { return true; }
     evt.preventDefault();
     if(this.dropdownShowing()){ this.hideDropdown(evt); }
     else{ this.showDropdown(); }
@@ -76,15 +76,26 @@ app.views.NotificationDropdown = app.views.Base.extend({
   },
 
   onPushBack: function(notification) {
-    var node = this.dropdownNotifications.append(notification.get("note_html"));
-    $(node).find(".unread-toggle .entypo-eye").tooltip("destroy").tooltip();
-    $(node).find(this.avatars.selector).error(this.avatars.fallback);
+    var node = $(notification.get("note_html"));
+    this.dropdownNotifications.append(node);
+    this.afterNotificationChanges(node);
   },
 
   onPushFront: function(notification) {
-    var node = this.dropdownNotifications.prepend(notification.get("note_html"));
-    $(node).find(".unread-toggle .entypo-eye").tooltip("destroy").tooltip();
-    $(node).find(this.avatars.selector).error(this.avatars.fallback);
+    var node = $(notification.get("note_html"));
+    this.dropdownNotifications.prepend(node);
+    this.afterNotificationChanges(node);
+  },
+
+  onNotificationChange: function(notification) {
+    var node = $(notification.get("note_html"));
+    this.dropdownNotifications.find("[data-guid=" + notification.get("id") + "]").replaceWith(node);
+    this.afterNotificationChanges(node);
+  },
+
+  afterNotificationChanges: function(node) {
+    node.find(".unread-toggle .entypo-eye").tooltip("destroy").tooltip();
+    this.setupAvatarFallback(node);
   },
 
   finishLoading: function() {
@@ -95,18 +106,17 @@ app.views.NotificationDropdown = app.views.Base.extend({
   },
 
   updateScrollbar: function() {
-    if(this.perfectScrollbarInitialized) {
-      this.dropdownNotifications.perfectScrollbar("update");
+    if (this.perfectScrollbar) {
+      this.perfectScrollbar.update();
     } else {
-      this.dropdownNotifications.perfectScrollbar();
-      this.perfectScrollbarInitialized = true;
+      this.perfectScrollbar = new PerfectScrollbar(this.dropdownNotifications[0]);
     }
   },
 
   destroyScrollbar: function() {
-    if(this.perfectScrollbarInitialized) {
-      this.dropdownNotifications.perfectScrollbar("destroy");
-      this.perfectScrollbarInitialized = false;
+    if (this.perfectScrollbar) {
+      this.perfectScrollbar.destroy();
+      this.perfectScrollbar = null;
     }
   }
 });

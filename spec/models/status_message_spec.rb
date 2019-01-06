@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #   Copyright (c) 2010-2011, Diaspora Inc.  This file is
 #   licensed under the Affero General Public License version 3 or later.  See
 #   the COPYRIGHT file.
@@ -8,6 +10,10 @@ describe StatusMessage, type: :model do
   let!(:user) { alice }
   let!(:aspect) { user.aspects.first }
   let(:status) { build(:status_message) }
+
+  it_behaves_like "a shareable" do
+    let(:object) { status }
+  end
 
   describe "scopes" do
     describe ".where_person_is_mentioned" do
@@ -44,6 +50,14 @@ describe StatusMessage, type: :model do
       describe ".public_tag_stream" do
         it "returns public status messages tagged with the tag" do
           expect(StatusMessage.public_tag_stream([@tag_id])).to eq([@status_message_1])
+        end
+
+        it "returns a post with two tags only once" do
+          status_message = FactoryGirl.create(:status_message, text: "#hashtag #test", public: true)
+          test_tag_id = ActsAsTaggableOn::Tag.where(name: "test").first.id
+
+          expect(StatusMessage.public_tag_stream([@tag_id, test_tag_id]))
+            .to match_array([@status_message_1, status_message])
         end
       end
 
@@ -141,6 +155,9 @@ describe StatusMessage, type: :model do
     end
   end
 
+  it_behaves_like "a reference source"
+  it_behaves_like "a reference target"
+
   describe "#nsfw" do
     it "returns MatchObject (true) if the post contains #nsfw (however capitalised)" do
       status = FactoryGirl.build(:status_message, text: "This message is #nSFw")
@@ -153,11 +170,22 @@ describe StatusMessage, type: :model do
     end
   end
 
-  describe "tags" do
-    before do
-      @object = FactoryGirl.build(:status_message)
+  describe "#comment_email_subject" do
+    it "delegates to message.title if the post have a text" do
+      expect(status.comment_email_subject).to eq(status.message.title)
     end
-    it_should_behave_like "it is taggable"
+
+    it "includes the photos count if there are photos without text" do
+      photo = FactoryGirl.build(:photo, public: true)
+      status = FactoryGirl.build(:status_message, author: photo.author, text: nil, photos: [photo], public: true)
+      expect(status.comment_email_subject).to eq(I18n.t("posts.show.photos_by", count: 1, author: status.author_name))
+    end
+  end
+
+  describe "tags" do
+    it_should_behave_like "it is taggable" do
+      let(:object) { build(:status_message) }
+    end
 
     it "associates different-case tags to the same tag entry" do
       assert_equal ActsAsTaggableOn.force_lowercase, true
@@ -189,7 +217,7 @@ describe StatusMessage, type: :model do
 
     it "should queue a GatherOembedData if it includes a link" do
       status_message
-      expect(Workers::GatherOEmbedData).to receive(:perform_async).with(instance_of(Fixnum), instance_of(String))
+      expect(Workers::GatherOEmbedData).to receive(:perform_async).with(kind_of(Integer), instance_of(String))
       status_message.save
     end
 
@@ -210,7 +238,7 @@ describe StatusMessage, type: :model do
 
     it "should queue a GatherOpenGraphData if it includes a link" do
       status_message
-      expect(Workers::GatherOpenGraphData).to receive(:perform_async).with(instance_of(Fixnum), instance_of(String))
+      expect(Workers::GatherOpenGraphData).to receive(:perform_async).with(kind_of(Integer), instance_of(String))
       status_message.save
     end
 
@@ -224,6 +252,23 @@ describe StatusMessage, type: :model do
         expect(status_message.contains_open_graph_url_in_text?).to be_nil
         expect(status_message.open_graph_url).to be_nil
       end
+    end
+  end
+
+  describe "poll" do
+    it "destroys the poll (with all answers and participations) when the status message is destroyed" do
+      poll = FactoryGirl.create(:poll_participation).poll
+      status_message = poll.status_message
+
+      poll_id = poll.id
+      poll_answers = poll.poll_answers.map(&:id)
+      poll_participations = poll.poll_participations.map(&:id)
+
+      status_message.destroy
+
+      expect(Poll.where(id: poll_id)).not_to exist
+      poll_answers.each {|id| expect(PollAnswer.where(id: id)).not_to exist }
+      poll_participations.each {|id| expect(PollParticipation.where(id: id)).not_to exist }
     end
   end
 

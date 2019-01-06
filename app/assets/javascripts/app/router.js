@@ -9,7 +9,7 @@ app.Router = Backbone.Router.extend({
     "commented(/)": "stream",
     "community_spotlight(/)": "spotlight",
     "contacts(/)": "contacts",
-    "conversations(/)(:id)(/)": "conversations",
+    "conversations(/)(:id)(?conversation_id=:conversation_id)(/)": "conversations",
     "followed_tags(/)": "followed_tags",
     "getting_started(/)": "gettingStarted",
     "help(/)": "help",
@@ -20,7 +20,6 @@ app.Router = Backbone.Router.extend({
     "p/:id(/)": "singlePost",
     "people(/)": "peopleSearch",
     "people/:id(/)": "profile",
-    "people/:id/contacts(/)": "profile",
     "people/:id/photos(/)": "photos",
     "posts/:id(/)": "singlePost",
     "profile/edit(/)": "settings",
@@ -93,8 +92,8 @@ app.Router = Backbone.Router.extend({
     app.page = new app.pages.Contacts({stream: stream});
   },
 
-  conversations: function(id) {
-    app.conversations = app.conversations || new app.views.ConversationsInbox();
+  conversations: function(id, conversationId) {
+    app.conversations = app.conversations || new app.views.ConversationsInbox(conversationId);
     if (parseInt("" + id, 10)) {
       app.conversations.renderConversation(id);
     }
@@ -182,11 +181,11 @@ app.Router = Backbone.Router.extend({
   },
 
   singlePost: function(id) {
-    this.renderPage(function() { return new app.pages.SinglePostViewer({id: id}); });
+    this.renderPage(function() { return new app.pages.SinglePostViewer({id: id, el: $("#container")}); });
   },
 
   spotlight: function() {
-    $("#invitations-button").click(function() {
+    $(".invitations-button").click(function() {
       app.helpers.showModal("#invitationsModal");
     });
   },
@@ -217,9 +216,10 @@ app.Router = Backbone.Router.extend({
     app.shortcuts = app.shortcuts || new app.views.StreamShortcuts({el: $(document)});
     if ($("#publisher").length !== 0) {
       app.publisher = app.publisher || new app.views.Publisher({collection: app.stream.items});
+      app.page.setupAvatarFallback($(".main-stream-publisher"));
     }
 
-    $("#main_stream").html(app.page.render().el);
+    $("#main-stream").html(app.page.render().el);
     this._hideInactiveStreamLists();
   },
 
@@ -228,7 +228,7 @@ app.Router = Backbone.Router.extend({
   },
 
   renderAspectMembershipDropdowns: function($context) {
-    $context.find(".aspect_membership_dropdown.placeholder").each(function() {
+    $context.find(".aspect-membership-dropdown.placeholder").each(function() {
       var personId = $(this).data("personId");
       var view = new app.views.AspectMembership({person: app.contacts.findWhere({"person_id": personId}).person});
       $(this).html(view.render().$el);

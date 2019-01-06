@@ -1,31 +1,28 @@
 // Only overriding existing selectors here, so disable some lint rules
 // scss-lint:disable IdSelector, SelectorFormat, NestingDepth, SelectorDepth, QualifyingElement
 body {
-  .navbar.navbar-fixed-top #user_menu .dropdown-menu > li > a {
-    color: $text-color;
-    &:hover { color: $white; }
-  }
-
   .publisher {
-    .mentions-input-box { background-color: $gray; }
     form {
-      #publisher_textarea_wrapper { background-color: $gray; }
+      #publisher-textarea-wrapper { background-color: $gray; }
       .btn.btn-link.question_mark:hover .entypo-cog { color: $gray-light; }
     }
-
-    .write-preview-tabs > li.active * { color: $text-color; }
-    .md-preview { background-color: $gray; }
-    .md-cancel:hover .entypo-cross { color: $gray-light; }
     .publisher-buttonbar .btn.btn-link:hover i { color: $gray-light; }
   }
 
-  .aspect_dropdown li a .text { color: $dropdown-link-color; }
+  .write-preview-tabs > li.active * { color: $text-color; }
+  .md-cancel:hover .entypo-cross { color: $gray-light; }
+
+  .md-input,
+  .md-preview { background-color: $gray; }
+
+  .aspect-dropdown li a .text { color: $dropdown-link-color; }
 
   .info .tag { background-color: $gray-light; }
 
-  .poll_form .progress {
+  .poll-form .progress {
     background-color: $gray-dark;
-    .bar { background-color: $gray-light; }
+    .progress-bar { background-color: $gray-light; }
+    .users-vote { background-color: $brand-primary; }
   }
 
   .stream-element .collapsible {
@@ -50,13 +47,13 @@ body {
   @import 'highlightjs/darcula';
 
   #single-post-content .head {
-    #post-info .author { color: lighten($gray-lighter, 27%); }
+    .author-name { color: lighten($gray-lighter, 27%); }
     #single-post-actions i.entypo-heart.red:hover { color: $red; }
   }
 
   .opengraph a { color: lighten($gray-lighter, 27%); }
 
-  .tag:hover { background-color: desaturate(darken($blue, 35%), 20%); }
+  .tag:hover { background-color: desaturate(darken($link-color, 35%), 20%); }
 
   #profile_container .profile_header {
     #author_info #sharing_message.entypo-check { color: lighten($green, 10%); }
@@ -64,7 +61,7 @@ body {
 
   #invitationsModal #email_invitation { border-top: 1px dashed $gray-light; }
 
-  #contacts_container #people_stream.contacts .stream-element.in_aspect {
+  #contacts_container #people-stream.contacts .stream-element.in_aspect {
     background-color: $state-success-bg;
     border-left: 3px solid darken($state-success-bg, 10%);
   }
@@ -96,6 +93,7 @@ body {
 
   #welcome-to-diaspora { background: $orange; }
 
+  .md-editor,
   .block-form fieldset .form-control:focus { border-color: $input-border; }
 
   &.page-registrations.action-new,

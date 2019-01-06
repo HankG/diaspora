@@ -20,7 +20,7 @@
           = render partial: "people/index", locals: {people: @stream.tagged_people}
 
     .col-md-9
-      .stream_container
+      .stream-container
         #author_info
           %h2
             = @stream.display_tag_name
@@ -28,10 +28,8 @@
         - if current_user
           = render "publisher/publisher", publisher_aspects_for(@stream)
 
-        #main_stream.stream
+        #main-stream.stream
 
         #paginate
           .loader.hidden
             .spinner
-
-      %a.entypo-chevron-up.back-to-top#back-to-top{title: "#{t('layouts.application.back_to_top')}", href: "#"}

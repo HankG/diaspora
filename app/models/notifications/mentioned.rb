@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module Notifications
   module Mentioned
     extend ActiveSupport::Concern
@@ -16,7 +18,10 @@ module Notifications
         )
 
         relevant_mentions.each do |mention|
-          create_notification(mention.person.owner, mention, actor).try(:email_the_user, mention, actor)
+          recipient = mention.person.owner
+          unless exists?(recipient: recipient, target: mention)
+            create_notification(recipient, mention, actor).try(:email_the_user, mention, actor)
+          end
         end
       end
     end

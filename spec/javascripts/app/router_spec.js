@@ -112,6 +112,13 @@ describe('app.Router', function () {
       this.router.conversations("12");
       expect(app.views.ConversationsInbox.prototype.renderConversation).toHaveBeenCalledWith("12");
     });
+
+    it("passes conversation_id parameter to ConversationsInbox initializer when passed in URL", function() {
+      app.conversations = undefined;
+      spyOn(app.views.ConversationsInbox.prototype, "initialize");
+      this.router.navigate("/conversations?conversation_id=45", {trigger: true});
+      expect(app.views.ConversationsInbox.prototype.initialize).toHaveBeenCalledWith("45");
+    });
   });
 
   describe("stream", function() {
@@ -123,14 +130,18 @@ describe('app.Router', function () {
   });
 
   describe("gettingStarted", function() {
+    beforeEach(function() {
+      spec.content().append($("<div id='hello-there'>"));
+    });
+
     it("renders app.pages.GettingStarted", function() {
       app.router.navigate("/getting_started", {trigger: true});
-      expect(app.page.$el.selector).toEqual("#hello-there");
+      expect(app.page.$el.is($("#hello-there"))).toBe(true);
     });
 
     it("renders app.pages.GettingStarted when the URL has a trailing slash", function() {
       app.router.navigate("/getting_started/", {trigger: true});
-      expect(app.page.$el.selector).toEqual("#hello-there");
+      expect(app.page.$el.is($("#hello-there"))).toBe(true);
     });
   });
 

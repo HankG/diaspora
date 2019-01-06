@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
 #   Copyright (c) 2010-2011, Diaspora Inc.  This file is
 #   licensed under the Affero General Public License version 3 or later.  See
 #   the COPYRIGHT file.
 
-class Post < ActiveRecord::Base
+class Post < ApplicationRecord
   self.include_root_in_json = false
 
   include ApplicationHelper
@@ -24,13 +26,17 @@ class Post < ActiveRecord::Base
   has_many :reshares, class_name: "Reshare", foreign_key: :root_guid, primary_key: :guid
   has_many :resharers, class_name: "Person", through: :reshares, source: :author
 
-  belongs_to :o_embed_cache
-  belongs_to :open_graph_cache
+  belongs_to :o_embed_cache, optional: true
+  belongs_to :open_graph_cache, optional: true
 
   validates_uniqueness_of :id
 
   after_create do
     self.touch(:interacted_at)
+  end
+
+  before_destroy do
+    reshares.update_all(root_guid: nil) # rubocop:disable Rails/SkipsModelValidations
   end
 
   #scopes
@@ -52,6 +58,17 @@ class Post < ActiveRecord::Base
 
   scope :liked_by, ->(person) {
     joins(:likes).where(:likes => {:author_id => person.id})
+  }
+
+  scope :subscribed_by, ->(user) {
+    joins(:participations).where(participations: {author_id: user.person_id})
+  }
+
+  scope :reshares, -> { where(type: "Reshare") }
+
+  scope :reshared_by, ->(person) {
+    # we join on the same table, Rails renames "posts" to "reshares_posts" for the right table
+    joins(:reshares).where(reshares_posts: {author_id: person.id})
   }
 
   def post_type
@@ -109,12 +126,12 @@ class Post < ActiveRecord::Base
 
   def reshare_for(user)
     return unless user
-    reshares.where(:author_id => user.person.id).first
+    reshares.find_by(author_id: user.person.id)
   end
 
   def like_for(user)
     return unless user
-    likes.where(:author_id => user.person.id).first
+    likes.find_by(author_id: user.person.id)
   end
 
   #############

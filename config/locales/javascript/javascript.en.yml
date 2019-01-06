@@ -28,6 +28,7 @@ en:
     comma: ","
     edit: "Edit"
     no_results: "No results found"
+    show_all: "Show all"
 
     admins:
       dashboard:
@@ -80,7 +81,6 @@ en:
           other: "The connection test returned an error for <%= count %> pods."
 
     aspects:
-      make_aspect_list_visible: "Make contacts in this aspect visible to each other?"
       name: "Name"
       create:
         add_a_new_aspect: "Add a new aspect"
@@ -123,8 +123,6 @@ en:
       add_contact: "Add contact"
       aspect_chat_is_enabled: "Contacts in this aspect are able to chat with you."
       aspect_chat_is_not_enabled: "Contacts in this aspect are not able to chat with you."
-      aspect_list_is_visible: "Contacts in this aspect are able to see each other."
-      aspect_list_is_not_visible: "Contacts in this aspect are not able to see each other."
       remove_contact: "Remove contact"
       error_add: "Couldn’t add <%= name %> to the aspect :("
       error_remove: "Couldn’t remove <%= name %> from the aspect :("
@@ -135,8 +133,6 @@ en:
     my_aspects: "My aspects"
 
     publisher:
-      limited: "Limited: your post will only be seen by people you are sharing with"
-      public: "Public: your post will be visible to everyone and found by search engines"
       near_from: "Posted from: <%= location %>"
       option: "Answer"
       add_option: "Add an answer"
@@ -169,6 +165,7 @@ en:
           list: "list text here"
           quote: "quotation text here"
           code: "code here"
+      mention_success: "Successfully mentioned: <%= names %>"
 
     bookmarklet:
       post_something: "Post to diaspora*"
@@ -183,7 +180,7 @@ en:
       mobile_row_unchecked: "<%= name %> (add)"
       stopped_sharing_with: "You have stopped sharing with <%= name %>."
       started_sharing_with: "You have started sharing with <%= name %>!"
-      error: "Couldn’t start sharing with <%= name %>.  Are you ignoring them?"
+      error: "Couldn’t start sharing with <%= name %>. Are you ignoring them?"
       error_remove: "Couldn’t remove <%= name %> from the aspect :("
       toggle:
         one: "In <%= count %> aspect"
@@ -205,10 +202,11 @@ en:
       add_an_aspect: "+ Add an aspect"
     getting_started:
       hey: "Hey, <%= name %>!"
-      no_tags: "Hey, you haven’t followed any tags!  Continue anyway?"
+      no_tags: "Hey, you haven’t followed any tags! Continue anyway?"
       alright_ill_wait: "All right, I’ll wait."
       preparing_your_stream: "Preparing your personalized stream..."
     photo_uploader:
+      upload_photos: "Upload photos"
       looking_good: "OMG, you look awesome!"
       completed: "<%= file %> completed"
       error: "A problem occurred while uploading file <%= file %>"
@@ -235,7 +233,6 @@ en:
       gender: "Gender"
       born: "Birthday"
       photos: "Photos"
-      contacts: "Contacts"
       posts: "Posts"
 
     conversation:
@@ -281,6 +278,11 @@ en:
         one: "<%= count %> Reshare"
         other: "<%= count %> Reshares"
 
+      comments:
+        zero: "<%= count %> comments"
+        one: "<%= count %> comment"
+        other: "<%= count %> comments"
+
       more_comments:
         zero: "Show <%= count %> more comments"
         one: "Show <%= count %> more comment"
@@ -298,11 +300,6 @@ en:
         stop_following_confirm: "Stop following #<%= tag %>?"
         follow_error: "Couldn’t follow #<%= tag %> :("
         stop_following_error: "Couldn’t stop following #<%= tag %> :("
-
-      reactions:
-        zero: "<%= count%> reactions"
-        one: "<%= count%> reaction"
-        other: "<%= count%> reactions"
 
     header:
       home: "Home"
@@ -343,3 +340,4 @@ en:
         other: "<%=count%> votes"
       show_result: "Show result"
       close_result: "Hide result"
+      your_vote: "Your vote"

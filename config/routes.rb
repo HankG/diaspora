@@ -1,17 +1,17 @@
+# frozen_string_literal: true
+
 #   Copyright (c) 2010-2011, Diaspora Inc.  This file is
 #   licensed under the Affero General Public License version 3 or later.  See
 #   the COPYRIGHT file.
 
-require 'sidekiq/web'
+require "sidekiq/web"
 require "sidekiq/cron/web"
+Sidekiq::Web.set :sessions, false # disable rack session cookie
 
-Diaspora::Application.routes.draw do
+Rails.application.routes.draw do
+  # For details on the DSL available within this file, see http://guides.rubyonrails.org/routing.html
 
   resources :report, except: %i(edit new show)
-
-  if Rails.env.production?
-    mount RailsAdmin::Engine => '/admin_panel', :as => 'rails_admin'
-  end
 
   constraints ->(req) { req.env["warden"].authenticate?(scope: :user) &&
                         req.env['warden'].user.admin? } do
@@ -31,7 +31,7 @@ Diaspora::Application.routes.draw do
 
   resources :posts, only: %i(show destroy) do
     member do
-      get :interactions
+      get :mentionable
     end
 
     resource :participation, only: %i(create destroy)
@@ -59,7 +59,6 @@ Diaspora::Application.routes.draw do
   get "aspects" => "streams#aspects", :as => "aspects_stream"
 
   resources :aspects, except: %i(index new edit) do
-    put :toggle_contact_visibility
     put :toggle_chat_privilege
     collection do
       put "order" => :update_order
@@ -74,6 +73,8 @@ Diaspora::Application.routes.draw do
 
 	#Search
 	get 'search' => "search#search"
+
+  get "link" => "links#resolve"
 
   resources :conversations, except: %i(edit update destroy)  do
     resources :messages, only: %i(create)
@@ -148,6 +149,12 @@ Diaspora::Application.routes.draw do
     post 'users/:id/close_account' => 'users#close_account', :as => 'close_account'
     post 'users/:id/lock_account' => 'users#lock_account', :as => 'lock_account'
     post 'users/:id/unlock_account' => 'users#unlock_account', :as => 'unlock_account'
+    post 'users/:id/make_admin' => 'users#make_admin', :as => 'make_admin'
+    post 'users/:id/remove_admin' => 'users#remove_admin', :as => 'remove_admin'
+    post 'users/:id/make_moderator' => 'users#make_moderator', :as => 'make_moderator'
+    post 'users/:id/remove_moderator' => 'users#remove_moderator', :as => 'remove_moderator'
+    post 'users/:id/make_spotlight' => 'users#make_spotlight', :as => 'make_spotlight'
+    post 'users/:id/remove_spotlight' => 'users#remove_spotlight', :as => 'remove_spotlight'
   end
 
   resource :profile, :only => [:edit, :update]
@@ -165,7 +172,6 @@ Diaspora::Application.routes.draw do
   resources :people, only: %i(show index) do
     resources :status_messages, only: %i(new create)
     resources :photos, except:  %i(new update)
-    get :contacts
     get :stream
     get :hovercard
 
@@ -232,6 +238,5 @@ Diaspora::Application.routes.draw do
     end
   end
 
-  get ".well-known/webfinger", to: "api/openid_connect/discovery#webfinger"
   get ".well-known/openid-configuration", to: "api/openid_connect/discovery#configuration"
 end

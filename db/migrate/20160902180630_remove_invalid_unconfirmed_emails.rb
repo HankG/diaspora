@@ -1,5 +1,7 @@
-class RemoveInvalidUnconfirmedEmails < ActiveRecord::Migration
-  class User < ActiveRecord::Base
+# frozen_string_literal: true
+
+class RemoveInvalidUnconfirmedEmails < ActiveRecord::Migration[4.2]
+  class User < ApplicationRecord
   end
 
   def up

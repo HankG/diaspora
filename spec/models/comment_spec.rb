@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #   Copyright (c) 2010-2011, Diaspora Inc.  This file is
 #   licensed under the Affero General Public License version 3 or later.  See
 #   the COPYRIGHT file.
@@ -8,6 +10,7 @@ describe Comment, type: :model do
   let(:comment_alice) { alice.comment!(status_bob, "why so formal?") }
 
   it_behaves_like "it is mentions container"
+  it_behaves_like "a reference source"
 
   describe "#destroy" do
     it "should delete a participation" do
@@ -20,25 +23,6 @@ describe Comment, type: :model do
       comment_alice.destroy
       participations = Participation.where(target_id: comment_alice.commentable_id, author_id: comment_alice.author_id)
       expect(participations.first.count).to eq(1)
-    end
-  end
-
-  describe "#people_allowed_to_be_mentioned" do
-    let(:kate) { FactoryGirl.create(:user_with_aspect, friends: [bob]) }
-    let(:olga) { FactoryGirl.create(:user_with_aspect, friends: [bob]) }
-
-    it "returns the author and people who have commented or liked the private post" do
-      eve.comment!(status_bob, "comment text")
-      kate.like!(status_bob)
-      olga.participate!(status_bob)
-      status_bob.reload
-      expect(comment_alice.people_allowed_to_be_mentioned).to match_array([alice, bob, eve, kate].map(&:person_id))
-    end
-
-    it "returns :all for public posts" do
-      # set parent public
-      status_bob.update(public: true)
-      expect(comment_alice.people_allowed_to_be_mentioned).to eq(:all)
     end
   end
 
@@ -135,13 +119,8 @@ describe Comment, type: :model do
   end
 
   describe "tags" do
-    let(:object) { build(:comment) }
-
-    before do
-      # shared_behaviors/taggable.rb is still using instance variables, so we need to define them here.
-      # Suggestion: refactor all specs using shared_behaviors/taggable.rb to use "let"
-      @object = object
+    it_should_behave_like "it is taggable" do
+      let(:object) { build(:comment) }
     end
-    it_should_behave_like "it is taggable"
   end
 end

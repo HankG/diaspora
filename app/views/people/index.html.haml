@@ -14,7 +14,7 @@
       = search_header
   .row
     .col-md-8
-      #people_stream.stream
+      #people-stream.stream
         - if @hashes.empty?
           %p
             - if @background_query.present?
@@ -28,8 +28,6 @@
             = render partial: 'people/person', locals: hash
 
           = will_paginate @people, renderer: WillPaginate::ActionView::BootstrapLinkRenderer
-
-        %a.entypo-chevron-up.back-to-top#back-to-top{title: "#{t('layouts.application.back_to_top')}", href: "#"}
 
     .col-md-4
       - if AppConfig.settings.invitations.open?

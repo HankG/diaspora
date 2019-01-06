@@ -43,17 +43,11 @@ describe("app.views.Publisher", function() {
     });
 
     describe("#initSubviews", function() {
-      it("calls handleTextchange if the publisher is prefilled with mentions", function() {
-        spyOn(this.view, "handleTextchange");
+      it("calls checkSubmitAvailability if the publisher is prefilled with mentions", function() {
+        spyOn(this.view, "checkSubmitAvailability");
         this.view.prefillMention = "user@example.org";
         this.view.initSubviews();
-        expect(this.view.handleTextchange).toHaveBeenCalled();
-      });
-
-      it("doesn't call handleTextchange if there are no prefilled mentions", function() {
-        spyOn(this.view, "handleTextchange");
-        this.view.initSubviews();
-        expect(this.view.handleTextchange).not.toHaveBeenCalled();
+        expect(this.view.checkSubmitAvailability).toHaveBeenCalled();
       });
     });
 
@@ -82,9 +76,9 @@ describe("app.views.Publisher", function() {
       });
 
       it("resets the element's height", function() {
-        $(this.view.el).find("#status_message_fake_text").height(100);
+        $(this.view.el).find("#status_message_text").height(100);
         this.view.close($.Event());
-        expect($(this.view.el).find("#status_message_fake_text").attr("style")).not.toContain("height");
+        expect($(this.view.el).find("#status_message_text").attr("style")).not.toContain("height");
       });
 
       it("calls autosize.update", function() {
@@ -118,7 +112,7 @@ describe("app.views.Publisher", function() {
         expect("#publisher").not.toHaveClass("closed");
         $("#publisher").find(".publisher-textarea-wrapper").click();
         expect("#publisher").not.toHaveClass("closed");
-        $("#publisher").find(".aspect_dropdown button").click();
+        $("#publisher").find(".aspect-dropdown button").click();
         expect("#publisher").not.toHaveClass("closed");
       });
 
@@ -127,10 +121,10 @@ describe("app.views.Publisher", function() {
         // that take the whole page when it detects a mobile.
         // Clicking on this element should not close the publisher.
         // See https://github.com/diaspora/diaspora/issues/6979.
-        $("#publisher").find(".aspect_dropdown").append("<div class='dropdown-backdrop'></div>")
+        $("#publisher").find(".aspect-dropdown").append("<div class='dropdown-backdrop'></div>")
           .css({position: "fixed", left: 0, right: 0, bottom: 0, top: 0, "z-index": 990});
         expect("#publisher").not.toHaveClass("closed");
-        $("#publisher").find(".aspect_dropdown button").click();
+        $("#publisher").find(".aspect-dropdown button").click();
         expect("#publisher").not.toHaveClass("closed");
         $("#publisher").find(".dropdown-backdrop").click();
         expect("#publisher").not.toHaveClass("closed");
@@ -203,12 +197,6 @@ describe("app.views.Publisher", function() {
     });
 
     describe("createStatusMessage", function(){
-      it("calls handleTextchange to complete missing mentions", function(){
-        spyOn(this.view, "handleTextchange");
-        this.view.createStatusMessage($.Event());
-        expect(this.view.handleTextchange).toHaveBeenCalled();
-      });
-
       it("adds the status message to the stream", function() {
         app.stream = { addNow: $.noop };
         spyOn(app.stream, "addNow");
@@ -224,20 +212,10 @@ describe("app.views.Publisher", function() {
       });
     });
 
-    describe("createPostPreview", function(){
-      it("calls handleTextchange to complete missing mentions", function(){
-        spyOn(this.view, "handleTextchange");
-        this.view.createPostPreview();
-        expect(this.view.handleTextchange).toHaveBeenCalled();
-      });
-    });
-
     describe('#setText', function() {
       it("sets the content text", function() {
         this.view.setText("FOO bar");
-
         expect(this.view.inputEl.val()).toEqual("FOO bar");
-        expect(this.view.hiddenInputEl.val()).toEqual("FOO bar");
       });
     });
 
@@ -248,7 +226,6 @@ describe("app.views.Publisher", function() {
 
         expect(this.view.disabled).toBeTruthy();
         expect(this.view.inputEl.prop("disabled")).toBeTruthy();
-        expect(this.view.hiddenInputEl.prop("disabled")).toBeTruthy();
       });
 
       it("disables submitting", function() {
@@ -272,6 +249,44 @@ describe("app.views.Publisher", function() {
 
         expect(submitCallback).toHaveBeenCalled();
         expect($(this.view.el)).not.toHaveClass("closed");
+      });
+
+      it("should submit the form when cmd+enter is pressed", function() {
+        this.view.render();
+        var form = this.view.$("form");
+        var submitCallback = jasmine.createSpy().and.returnValue(false);
+        form.submit(submitCallback);
+
+        var e = $.Event("keydown", {which: Keycodes.ENTER, metaKey: true});
+        this.view.keyDown(e);
+
+        expect(submitCallback).toHaveBeenCalled();
+        expect($(this.view.el)).not.toHaveClass("closed");
+      });
+    });
+
+    describe("tryClose", function() {
+      it("doesn't close the publisher if it is submittable", function() {
+        spyOn(this.view, "_submittable").and.returnValue(true);
+        spyOn(this.view, "close");
+        this.view.tryClose();
+        expect(this.view.close).not.toHaveBeenCalled();
+      });
+
+      it("doesn't close the publisher if it is in preview mode", function() {
+        spyOn(this.view, "_submittable").and.returnValue(false);
+        spyOn(this.view.markdownEditor, "isPreviewMode").and.returnValue(true);
+        spyOn(this.view, "close");
+        this.view.tryClose();
+        expect(this.view.close).not.toHaveBeenCalled();
+      });
+
+      it("closes the publisher if it is neither submittable nor in preview mode", function() {
+        spyOn(this.view, "_submittable").and.returnValue(false);
+        spyOn(this.view.markdownEditor, "isPreviewMode").and.returnValue(false);
+        spyOn(this.view, "close");
+        this.view.tryClose();
+        expect(this.view.close).toHaveBeenCalled();
       });
     });
 
@@ -388,13 +403,13 @@ describe("app.views.Publisher", function() {
 
     describe("toggles the selected entry visually", function(){
       it("click on the first aspect", function(){
-        this.view.$(".aspect_dropdown li.aspect_selector:first").click();
+        this.view.$(".aspect-dropdown li.aspect_selector:first").click();
         expect($("#publisher #visibility-icon")).not.toHaveClass("entypo-globe");
         expect($("#publisher #visibility-icon")).toHaveClass("entypo-lock");
       });
 
       it("click on public", function(){
-        this.view.$(".aspect_dropdown li.public").click();
+        this.view.$(".aspect-dropdown li.public").click();
         expect($("#publisher #visibility-icon")).toHaveClass("entypo-globe");
         expect($("#publisher #visibility-icon")).not.toHaveClass("entypo-lock");
       });
@@ -415,7 +430,7 @@ describe("app.views.Publisher", function() {
         expect(selected.length).toBe(1);
         expect(selected.first().val()).toBe('all_aspects');
 
-        var evt = $.Event("click", { target: $('.aspect_dropdown li.aspect_selector:last') });
+        var evt = $.Event("click", { target: $('.aspect-dropdown li.aspect_selector:last') });
         this.view.viewAspectSelector.toggleAspect(evt);
 
         selected = $('input[name="aspect_ids[]"]');
@@ -426,20 +441,20 @@ describe("app.views.Publisher", function() {
       it("toggles the same item", function() {
         expect($('input[name="aspect_ids[]"][value="42"]').length).toBe(0);
 
-        var evt = $.Event("click", { target: $('.aspect_dropdown li.aspect_selector:last') });
+        var evt = $.Event("click", { target: $('.aspect-dropdown li.aspect_selector:last') });
         this.view.viewAspectSelector.toggleAspect(evt);
         expect($('input[name="aspect_ids[]"][value="42"]').length).toBe(1);
 
-        evt = $.Event("click", { target: $('.aspect_dropdown li.aspect_selector:last') });
+        evt = $.Event("click", { target: $('.aspect-dropdown li.aspect_selector:last') });
         this.view.viewAspectSelector.toggleAspect(evt);
         expect($('input[name="aspect_ids[]"][value="42"]').length).toBe(0);
       });
 
       it("keeps other fields with different values", function() {
         $('.dropdown-menu').append('<li data-aspect_id="99" class="aspect_selector" />');
-        var evt = $.Event("click", { target: $('.aspect_dropdown li.aspect_selector:eq(-2)') });
+        var evt = $.Event("click", { target: $('.aspect-dropdown li.aspect_selector:eq(-2)') });
         this.view.viewAspectSelector.toggleAspect(evt);
-        evt = $.Event("click", { target: $('.aspect_dropdown li.aspect_selector:eq(-1)') });
+        evt = $.Event("click", { target: $('.aspect-dropdown li.aspect_selector:eq(-1)') });
         this.view.viewAspectSelector.toggleAspect(evt);
 
         expect($('input[name="aspect_ids[]"][value="42"]').length).toBe(1);
@@ -502,21 +517,24 @@ describe("app.views.Publisher", function() {
     beforeEach(function() {
       jQuery.fx.off = true;
       setFixtures(
-        '<div id="publisher">'+
-        '  <div class="content_creation"><form>'+
-        '    <div id="publisher_textarea_wrapper"></div>'+
-        '    <div id="photodropzone"></div>'+
-        '    <input type="submit" />'+
-        '  </form></div>'+
-        '</div>'
+        "<div id=\"publisher\">" +
+        "  <div class=\"content_creation\"><form>" +
+        "    <div id=\"publisher-textarea-wrapper\">" +
+        "      <div id=\"photodropzone_container\">" +
+        "        <ul id=\"photodropzone\"></ul>" +
+        "      </div>" +
+        "    </div>" +
+        "    <input type=\"submit\" />" +
+        "  </form></div>" +
+        "</div>"
       );
     });
 
-    it('initializes the file uploader plugin', function() {
-      spyOn(qq, 'FileUploaderBasic');
+    it("initializes the FineUploader plugin", function() {
+      spyOn(qq, "FineUploaderBasic");
       new app.views.Publisher();
 
-      expect(qq.FileUploaderBasic).toHaveBeenCalled();
+      expect(qq.FineUploaderBasic).toHaveBeenCalled();
     });
 
     context('event handlers', function() {
@@ -524,56 +542,77 @@ describe("app.views.Publisher", function() {
         this.view = new app.views.Publisher();
 
         // replace the uploader plugin with a dummy object
-        var upload_view = this.view.viewUploader;
+        var uploadView = this.view.viewUploader;
         this.uploader = {
-          onProgress: _.bind(upload_view.progressHandler, upload_view),
-          onSubmit:   _.bind(upload_view.submitHandler, upload_view),
-          onComplete: _.bind(upload_view.uploadCompleteHandler, upload_view)
+          onProgress: _.bind(uploadView.progressHandler, uploadView),
+          onUploadStarted: _.bind(uploadView.uploadStartedHandler, uploadView),
+          onUploadCompleted: _.bind(uploadView.uploadCompleteHandler, uploadView)
         };
-        upload_view.uploader = this.uploader;
+        uploadView.uploader = this.uploader;
       });
 
-      context('progress', function() {
-        it('shows progress in percent', function() {
-          this.uploader.onProgress(null, 'test.jpg', 20, 100);
-
-          var info = this.view.viewUploader.info;
-          expect(info.text()).toContain('test.jpg');
-          expect(info.text()).toContain('20%');
-        });
-      });
-
-      context('submitting', function() {
+      context("progress", function() {
         beforeEach(function() {
-          this.uploader.onSubmit(null, 'test.jpg');
+          this.view.photozoneEl.append(
+            "<li id=\"upload-0\" class=\"publisher_photo loading\" style=\"position:relative;\">" +
+            "  <div class=\"progress\">" +
+            "    <div class=\"progress-bar progress-bar-striped active\" role=\"progressbar\"></div>" +
+            "  </div>" +
+            "  <div class=\"spinner\"></div>" +
+            "</li>");
+          this.view.photozoneEl.append(
+            "<li id=\"upload-1\" class=\"publisher_photo loading\" style=\"position:relative;\">" +
+            "  <div class=\"progress\">" +
+            "    <div class=\"progress-bar progress-bar-striped active\" role=\"progressbar\"></div>" +
+            "  </div>" +
+            "  <div class=\"spinner\"></div>" +
+            "</li>");
         });
 
-        it('adds a placeholder', function() {
+        it("shows progress in percent", function() {
+          this.uploader.onProgress(0, "test.jpg", 20);
+          this.uploader.onProgress(1, "test2.jpg", 25);
+
+          var dropzone = $("#photodropzone");
+          expect(dropzone.find("li.loading#upload-0 .progress-bar").attr("style")).toBe("width: 20%;");
+          expect(dropzone.find("li.loading#upload-1 .progress-bar").attr("style")).toBe("width: 25%;");
+        });
+      });
+
+      context("submitting", function() {
+        beforeEach(function() {
+          this.uploader.onUploadStarted(null, "test.jpg");
+        });
+
+        it("adds a placeholder", function() {
           expect(this.view.wrapperEl.attr("class")).toContain("with_attachments");
           expect(this.view.photozoneEl.find("li").length).toBe(1);
         });
 
-        it('disables the publisher buttons', function() {
+        it("disables the publisher buttons", function() {
           expect(this.view.submitEl.prop("disabled")).toBeTruthy();
         });
       });
 
       context('successful completion', function() {
         beforeEach(function() {
-          $('#photodropzone').html('<li class="publisher_photo loading"><img src="" /></li>');
+          $("#photodropzone").html("<li id='upload-0' class='publisher_photo loading'></li>");
 
-          this.uploader.onComplete(null, 'test.jpg', {
+          /* eslint-disable camelcase */
+          this.uploader.onUploadCompleted(0, "test.jpg", {
             data: { photo: {
               id: '987',
-              unprocessed_image: { url: 'test.jpg' }
+              unprocessed_image: {
+                scaled_full: {url: "/uploads/images/scaled_full_test.jpg"},
+                thumb_large: {url: "/uploads/images/thumb_large_test.jpg"},
+                thumb_medium: {url: "/uploads/images/thumb_medium_test.jpg"},
+                thumb_small: {url: "/uploads/images/thumb_small_test.jpg"},
+                url: "/uploads/images/test.jpg"
+              }
             }},
             success: true });
         });
-
-        it('shows it in text form', function() {
-          var info = this.view.viewUploader.info;
-          expect(info.text()).toBe(Diaspora.I18n.t('photo_uploader.completed', {file: 'test.jpg'}));
-        });
+        /* eslint-enable camelcase */
 
         it('adds a hidden input to the publisher', function() {
           var input = this.view.$('input[type="hidden"][value="987"][name="photos[]"]');
@@ -584,9 +623,11 @@ describe("app.views.Publisher", function() {
           var li  = this.view.photozoneEl.find("li");
           var img = li.find('img');
 
-          expect(li.attr('class')).not.toContain('loading');
-          expect(img.attr('src')).toBe('test.jpg');
-          expect(img.attr('data-id')).toBe('987');
+          expect(li).not.toHaveClass("loading");
+          expect(img.attr("src")).toBe("/uploads/images/thumb_medium_test.jpg");
+          expect(img.attr("data-small")).toBe("/uploads/images/thumb_small_test.jpg");
+          expect(img.attr("data-scaled")).toBe("/uploads/images/scaled_full_test.jpg");
+          expect(img.attr("data-id")).toBe("987");
         });
 
         it('re-enables the buttons', function() {
@@ -596,25 +637,31 @@ describe("app.views.Publisher", function() {
 
       context('unsuccessful completion', function() {
         beforeEach(function() {
-          $('#photodropzone').html('<li class="publisher_photo loading"><img src="" /></li>');
+          $("#photodropzone").append("<li id='upload-0' class='publisher_photo loading'></li>");
 
-          this.uploader.onComplete(null, 'test.jpg', {
+          /* eslint-disable camelcase */
+          this.uploader.onUploadCompleted(0, "test.jpg", {
             data: { photo: {
               id: '987',
-              unprocessed_image: { url: 'test.jpg' }
+              unprocessed_image: {
+                thumb_small: {url: "test.jpg"},
+                thumb_medium: {url: "test.jpg"},
+                thumb_large: {url: "test.jpg"},
+                scaled_full: {url: "test.jpg"}
+              }
             }},
             success: false });
         });
-
+        /* eslint-enable camelcase */
         it('shows error message', function() {
-          var info = this.view.viewUploader.info;
-          expect(info.text()).toBe(Diaspora.I18n.t('photo_uploader.error', {file: 'test.jpg'}));
+          expect($("#photodropzone li").length).toEqual(0);
+          expect($("#upload_error").text()).toBe(Diaspora.I18n.t("photo_uploader.error", {file: "test.jpg"}));
         });
       });
     });
 
     context('photo removal', function() {
-      beforeEach(function() {
+      beforeEach(function(done) {
         this.view = new app.views.Publisher();
         this.view.wrapperEl.addClass("with_attachments");
         this.view.photozoneEl.html(
@@ -626,6 +673,7 @@ describe("app.views.Publisher", function() {
         );
 
         spyOn(jQuery, 'ajax').and.callFake(function(opts) { opts.success(); });
+        this.view.viewUploader.on("change", done);
         this.view.photozoneEl.find(".x").click();
       });
 

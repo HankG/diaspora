@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Admin::PodsController, type: :controller do
   before do
     @user = FactoryGirl.create :user
@@ -38,12 +40,12 @@ describe Admin::PodsController, type: :controller do
     end
 
     it "performs a connection test" do
-      post :recheck, pod_id: 1
+      post :recheck, params: {pod_id: 1}
       expect(response).to be_redirect
     end
 
     it "performs a connection test (format: json)" do
-      post :recheck, pod_id: 1, format: :json
+      post :recheck, params: {pod_id: 1}, format: :json
       expect(response.body).to eql(PodPresenter.new(@pod).to_json)
     end
   end

@@ -1,9 +1,14 @@
+# frozen_string_literal: true
+
 #   Copyright (c) 2010-2011, Diaspora Inc.  This file is
 #   licensed under the Affero General Public License version 3 or later.  See
 #   the COPYRIGHT file.
 
 class StatusMessage < Post
   include Diaspora::Taggable
+
+  include Reference::Source
+  include Reference::Target
 
   include PeopleHelper
 
@@ -18,7 +23,8 @@ class StatusMessage < Post
   has_many :photos, :dependent => :destroy, :foreign_key => :status_message_guid, :primary_key => :guid
 
   has_one :location
-  has_one :poll, autosave: true
+  has_one :poll, autosave: true, dependent: :destroy
+  has_many :poll_participations, through: :poll
 
   attr_accessor :oembed_url
   attr_accessor :open_graph_url
@@ -31,6 +37,10 @@ class StatusMessage < Post
     owned_or_visible_by_user(person.owner).joins(:mentions).where(mentions: {person_id: person.id})
   }
 
+  def self.model_name
+    Post.model_name
+  end
+
   def self.guids_for_author(person)
     Post.connection.select_values(Post.where(:author_id => person.id).select('posts.guid').to_sql)
   end
@@ -40,7 +50,7 @@ class StatusMessage < Post
   end
 
   def self.public_tag_stream(tag_ids)
-    all_public.tag_stream(tag_ids)
+    all_public.select("DISTINCT #{table_name}.*").tag_stream(tag_ids)
   end
 
   def self.tag_stream(tag_ids)
@@ -52,7 +62,11 @@ class StatusMessage < Post
   end
 
   def comment_email_subject
-    message.title
+    if message.present?
+      message.title
+    elsif photos.present?
+      I18n.t("posts.show.photos_by", count: photos.size, author: author_name)
+    end
   end
 
   def first_photo_url(*args)
@@ -95,6 +109,8 @@ class StatusMessage < Post
     photos.each {|photo| photo.receive(recipient_user_ids) }
   end
 
+  # Note: the next two methods can be safely removed once changes from #6818 are deployed on every pod
+  # see StatusMessageCreationService#dispatch
   # Only includes those people, to whom we're going to send a federation entity
   # (and doesn't define exhaustive list of people who can receive it)
   def people_allowed_to_be_mentioned

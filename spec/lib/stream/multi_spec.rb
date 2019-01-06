@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 require Rails.root.join('spec', 'shared_behaviors', 'stream')
 
 describe Stream::Multi do
@@ -60,7 +62,7 @@ describe Stream::Multi do
       end
 
       it 'includes a mention of the inviter' do
-        mention = "@{#{@inviter.name} ; #{@inviter.diaspora_handle}}"
+        mention = "@{#{@inviter.diaspora_handle}}"
         expect(@stream.send(:publisher_prefill)).to include(mention)
       end
     end

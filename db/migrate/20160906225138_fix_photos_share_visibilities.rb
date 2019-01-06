@@ -1,8 +1,10 @@
-class FixPhotosShareVisibilities < ActiveRecord::Migration
-  class Photo < ActiveRecord::Base
+# frozen_string_literal: true
+
+class FixPhotosShareVisibilities < ActiveRecord::Migration[4.2]
+  class Photo < ApplicationRecord
   end
 
-  class ShareVisibility < ActiveRecord::Base
+  class ShareVisibility < ApplicationRecord
   end
 
   def up

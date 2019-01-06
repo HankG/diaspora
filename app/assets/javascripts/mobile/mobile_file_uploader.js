@@ -2,80 +2,74 @@
 //= require js_image_paths
 
 function createUploader(){
-   var aspectIds = gon.preloads.aspect_ids;
+  var aspectIds = gon.preloads.aspect_ids;
+  var fileInfo = $("#fileInfo-publisher");
 
-   new qq.FileUploaderBasic({
-       element: document.getElementById('file-upload-publisher'),
-       params: {'photo' : {'pending' : 'true', 'aspect_ids' : aspectIds},},
-       allowedExtensions: ['jpg', 'jpeg', 'png', 'gif', 'tiff'],
-       action: "/photos",
-       debug: false,
-       button: document.getElementById('file-upload-publisher'),
-       sizeLimit: 4194304,
+  // Initialize the PostPhotoUploader and subscribe its events
+  this.uploader = new Diaspora.PostPhotoUploader(document.getElementById("file-upload-publisher"), aspectIds);
 
-       onProgress: function(id, fileName, loaded, total){
-        var progress = Math.round(loaded / total * 100 );
-         $('#fileInfo-publisher').text(fileName + ' ' + progress + '%');
-       },
+  this.uploader.onUploadStarted = _.bind(uploadStartedHandler, this);
+  this.uploader.onProgress = _.bind(progressHandler, this);
+  this.uploader.onUploadCompleted = _.bind(uploadCompletedHandler, this);
 
-       messages: {
-          typeError: Diaspora.I18n.t("photo_uploader.invalid_ext"),
-          sizeError: Diaspora.I18n.t("photo_uploader.size_error"),
-          emptyError: Diaspora.I18n.t("photo_uploader.empty")
-       },
+  function progressHandler(fileName, progress) {
+    fileInfo.text(fileName + " " + progress + "%");
+  }
 
-       onSubmit: function(){
-        $('#file-upload-publisher').addClass("loading");
-        $('#publisher_textarea_wrapper').addClass("with_attachments");
-        $('#photodropzone').append(
-          "<li class='publisher_photo loading' style='position:relative;'>" +
-            "<img alt='Ajax-loader2' src='"+ImagePaths.get('ajax-loader2.gif')+"' />" +
-          "</li>"
-          );
-       },
+  function uploadStartedHandler() {
+    $("#publisher-textarea-wrapper").addClass("with_attachments");
+    $("#photodropzone").append(
+      "<li class='publisher_photo loading' style='position:relative;'>" +
+      "<img alt='Ajax-loader2' src='" + ImagePaths.get("ajax-loader2.gif") + "' />" +
+      "</li>"
+    );
+  }
 
-       onComplete: function(_id, fileName, responseJSON) {
-        $('#fileInfo-publisher').text(Diaspora.I18n.t("photo_uploader.completed", {'file': fileName}));
-        var id = responseJSON.data.photo.id,
-            url = responseJSON.data.photo.unprocessed_image.url,
-            currentPlaceholder = $('li.loading').first();
+  function uploadCompletedHandler(_id, fileName, responseJSON) {
+    if (responseJSON.data === undefined) {
+      return;
+    }
 
-        $('#publisher_textarea_wrapper').addClass("with_attachments");
-        $('#new_status_message').append("<input type='hidden' value='" + id + "' name='photos[]' />");
+    fileInfo.text(Diaspora.I18n.t("photo_uploader.completed", {"file": fileName}));
+    var id = responseJSON.data.photo.id,
+        image = responseJSON.data.photo.unprocessed_image,
+        currentPlaceholder = $("li.loading").first();
 
-        // replace image placeholders
-        var img = currentPlaceholder.find('img');
-        img.attr('src', url);
-        img.attr('data-id', id);
-        currentPlaceholder.removeClass('loading');
-        currentPlaceholder.append("<div class='x'>X</div>" +
-            "<div class='circle'></div>");
-        ////
+    $("#publisher-textarea-wrapper").addClass("with_attachments");
+    $("#new_status_message").append("<input type='hidden' value='" + id + "' name='photos[]' />");
 
-        var publisher = $('#publisher');
+    // replace image placeholders
+    var img = currentPlaceholder.find("img");
+    img.attr("src", image.thumb_medium.url);
+    img.attr("data-small", image.thumb_small.url);
+    img.attr("data-scaled", image.scaled_full.url);
+    img.attr("data-id", id);
+    currentPlaceholder.removeClass("loading");
+    currentPlaceholder.append("<div class='x'>X</div>" +
+      "<div class='circle'></div>");
 
-        publisher.find("input[type='submit']").removeAttr('disabled');
+    var publisher = $("#publisher");
 
-        $('.x').bind('click', function(){
-          var photo = $(this).closest('.publisher_photo');
-          photo.addClass("dim");
-          $.ajax({url: "/photos/" + photo.children('img').attr('data-id'),
-                  dataType: 'json',
-                  type: 'DELETE',
-                  success: function() {
-                            photo.fadeOut(400, function(){
-                              photo.remove();
-                              if ( $('.publisher_photo').length === 0){
-                                $('#publisher_textarea_wrapper').removeClass("with_attachments");
-                              }
-                            });
-                          }
-                  });
-        });
-       },
+    publisher.find("input[type='submit']").removeAttr("disabled");
 
-       onAllComplete: function(){}
-   });
+    $(".x").bind("click", function() {
+      var photo = $(this).closest(".publisher_photo");
+      photo.addClass("dim");
+      $.ajax({
+        url: "/photos/" + photo.children("img").attr("data-id"),
+        dataType: "json",
+        type: "DELETE",
+        success: function() {
+          photo.fadeOut(400, function() {
+            photo.remove();
+            if ($(".publisher_photo").length === 0) {
+              $("#publisher-textarea-wrapper").removeClass("with_attachments");
+            }
+          });
+        }
+      });
+    });
+  }
 }
 window.addEventListener("load", function() {
   createUploader();

@@ -1,29 +1,26 @@
+# frozen_string_literal: true
+
 module PublishingCukeHelpers
   def write_in_publisher(txt)
-    fill_in 'status_message_fake_text', with: txt
+    fill_in "status_message_text", with: txt
   end
 
-  def append_to_publisher(txt, input_selector='#status_message_fake_text')
-    status_message_text = find("#status_message_text", visible: false).value
-    find(input_selector).native.send_key(" #{txt}")
-
-    # make sure the other text field got the new contents
-    if input_selector == "#status_message_fake_text"
-      begin
-        expect(page).to have_selector("#status_message_text[value='#{status_message_text} #{txt}']", visible: false)
-      rescue RSpec::Expectations::ExpectationNotMetError
-        puts "Value was instead: #{find('#status_message_text', visible: false).value.inspect}"
-        raise
-      end
-    end
+  def append_to_publisher(txt)
+    status_message_text = find("#status_message_text").value
+    fill_in id: "status_message_text", with: "#{status_message_text} #{txt}"
+    # trigger JavaScript event listeners
+    find("#status_message_text").native.send_key(:end)
   end
 
   def upload_file_with_publisher(path)
-    page.execute_script(%q{$("input[name='file']").css("opacity", '1');})
-    with_scope("#publisher_textarea_wrapper") do
-      attach_file("file", Rails.root.join(path).to_s)
+    page.execute_script(%q{$("input[name='qqfile']").css("opacity", '1');})
+    image_count = all(".publisher_photo img", wait: false).count
+    with_scope("#publisher-textarea-wrapper") do
+      attach_file("qqfile", Rails.root.join(path).to_s)
       # wait for the image to be ready
       page.assert_selector(".publisher_photo.loading", count: 0)
+      page.assert_selector(".publisher_photo img", count: image_count + 1)
+      page.assert_selector(".publisher_photo img.hidden", count: 0)
     end
   end
 
@@ -32,11 +29,17 @@ module PublishingCukeHelpers
     submit_publisher
   end
 
+  def visible_text_from_markdown(text)
+    CGI.unescapeHTML(ActionController::Base.helpers.strip_tags(Diaspora::MessageRenderer.new(text).markdownified)).strip
+  end
+
   def submit_publisher
-    txt = find("#publisher #status_message_fake_text").value
+    txt = find("#publisher #status_message_text").value
     find("#publisher .btn-primary").click
+    # wait for the publisher to be closed
+    expect(find("#publisher")["class"]).to include("closed")
     # wait for the content to appear
-    expect(find("#main_stream")).to have_content(txt)
+    expect(find("#main-stream")).to have_content(visible_text_from_markdown(txt))
   end
 
   def click_and_post(text)
@@ -45,7 +48,7 @@ module PublishingCukeHelpers
   end
 
   def click_publisher
-    find("#status_message_fake_text").click
+    find("#status_message_text").click
     expect(find("#publisher")).to have_css(".publisher-textarea-wrapper.active")
   end
 
@@ -101,7 +104,9 @@ module PublishingCukeHelpers
 
   def like_stream_post(post_text)
     within_post(post_text) do
-      find(:css, 'a.like').click
+      action = find(:css, "a.like").text
+      find(:css, "a.like").click
+      expect(find(:css, "a.like")).not_to have_text(action)
     end
   end
 

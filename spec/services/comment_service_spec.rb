@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe CommentService do
   let(:post) { alice.post(:status_message, text: "hello", to: alice.aspects.first) }
 
@@ -26,7 +28,7 @@ describe CommentService do
 
     it "fail if the user can not see the post" do
       expect {
-        CommentService.new(eve).create("unknown id", "hi")
+        CommentService.new(eve).create(post.id, "hi")
       }.to raise_error ActiveRecord::RecordNotFound
     end
   end

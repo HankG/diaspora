@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Workers::SendPublic do
   let(:sender_id) { "any_user@example.org" }
   let(:obj_str) { "status_message@guid" }
@@ -19,7 +21,7 @@ describe Workers::SendPublic do
       sender_id, obj_str, urls, xml
     ).and_return(failing_urls)
     expect(Workers::SendPublic).to receive(:perform_in).with(
-      kind_of(Fixnum), sender_id, obj_str, failing_urls, xml, 1
+      kind_of(Integer), sender_id, obj_str, failing_urls, xml, 1
     )
 
     Workers::SendPublic.new.perform(sender_id, obj_str, urls, xml)

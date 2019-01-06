@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 #   Copyright (c) 2010-2011, Diaspora Inc.  This file is
 #   licensed under the Affero General Public License version 3 or later.  See
 #   the COPYRIGHT file.
@@ -33,6 +35,30 @@ describe ApplicationHelper, :type => :helper do
     end
   end
 
+  describe "#service_unconnected?" do
+    attr_reader :current_user
+
+    before do
+      @current_user = alice
+    end
+
+    it "returns true if the service is unconnected" do
+      expect(AppConfig).to receive(:show_service?).with("service", alice).and_return(true)
+      expect(service_unconnected?("service")).to be true
+    end
+
+    it "returns false if the service is already connected" do
+      @current_user.services << FactoryGirl.build(:service, provider: "service")
+      expect(AppConfig).to receive(:show_service?).with("service", alice).and_return(true)
+      expect(service_unconnected?("service")).to be false
+    end
+
+    it "returns false if the the service shouldn't be shown" do
+      expect(AppConfig).to receive(:show_service?).with("service", alice).and_return(false)
+      expect(service_unconnected?("service")).to be false
+    end
+  end
+
   describe "#jquery_include_tag" do
     describe "with jquery cdn" do
       before do
@@ -54,17 +80,45 @@ describe ApplicationHelper, :type => :helper do
       end
 
       it 'includes jquery.js from asset pipeline' do
-        expect(helper.jquery_include_tag).to match(/jquery2\.js/)
+        expect(helper.jquery_include_tag).to match(/jquery3-[0-9a-f]{64}\.js/)
         expect(helper.jquery_include_tag).not_to match(/jquery\.com/)
       end
     end
 
     it 'inclues jquery_ujs.js' do
-      expect(helper.jquery_include_tag).to match(/jquery_ujs\.js/)
+      expect(helper.jquery_include_tag).to match(/jquery_ujs-[0-9a-f]{64}\.js/)
     end
 
     it "disables ajax caching" do
       expect(helper.jquery_include_tag).to match(/jQuery\.ajaxSetup/)
+    end
+  end
+
+  describe "#donations_enabled?" do
+    it "returns false when nothing is set" do
+      expect(helper.donations_enabled?).to be false
+    end
+
+    it "returns true when the paypal donations is enabled" do
+      AppConfig.settings.paypal_donations.enable = true
+      expect(helper.donations_enabled?).to be true
+    end
+
+    it "returns true when the liberapay username is set" do
+      AppConfig.settings.liberapay_username = "foo"
+      expect(helper.donations_enabled?).to be true
+    end
+
+    it "returns true when the bitcoin_address is set" do
+      AppConfig.settings.bitcoin_address = "bar"
+      expect(helper.donations_enabled?).to be true
+    end
+
+    it "returns true when all the donations are enabled" do
+      AppConfig.settings.paypal_donations.enable = true
+      AppConfig.settings.liberapay_username = "foo"
+      AppConfig.settings.bitcoin_address = "bar"
+      expect(helper.donations_enabled?).to be true
     end
   end
 

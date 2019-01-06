@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module MentioningSpecHelpers
   def notifications_about_mentioning(user, object)
     table = object.class.table_name
@@ -51,7 +53,10 @@ module MentioningSpecHelpers
     sign_in user1
     status_msg = nil
     inlined_jobs do
-      post "/status_messages.json", status_message: {text: text_mentioning(mentioned_user)}, aspect_ids: aspects
+      post "/status_messages.json", params: {
+        status_message: {text: text_mentioning(mentioned_user)},
+        aspect_ids:     aspects
+      }
       status_msg = StatusMessage.find(JSON.parse(response.body)["id"])
     end
     status_msg
@@ -73,7 +78,7 @@ module MentioningSpecHelpers
   end
 
   def receive_status_message_via_federation(text, *recipients)
-    entity = FactoryGirl.build(
+    entity = Fabricate(
       :status_message_entity,
       author: remote_raphael.diaspora_handle,
       text:   text,
@@ -200,7 +205,6 @@ describe "mentioning", type: :request do
 
     expect(status_msg).not_to be_nil
     expect(status_msg.public?).to be true
-    expect(status_msg.text).to include(user3.name)
     expect(status_msg.text).to include(user3.diaspora_handle)
 
     expect(user3).to be_mentioned_in(status_msg)
@@ -215,7 +219,6 @@ describe "mentioning", type: :request do
 
     expect(status_msg).not_to be_nil
     expect(status_msg.public?).to be false
-    expect(status_msg.text).to include(user2.name)
     expect(status_msg.text).to include(user2.diaspora_handle)
 
     expect(user2).to be_mentioned_in(status_msg)
@@ -375,6 +378,18 @@ describe "mentioning", type: :request do
             it { is_expected.not_to be_mentioned_in(comment) }
           end
         end
+      end
+
+      it "only creates one notification for the mentioned person, when mentioned person commented twice before" do
+        parent = FactoryGirl.create(:status_message_in_aspect, author: author.person)
+        mentioned_user = FactoryGirl.create(:user_with_aspect, friends: [author])
+        mentioned_user.comment!(parent, "test comment 1")
+        mentioned_user.comment!(parent, "test comment 2")
+        comment = inlined_jobs do
+          author.comment!(parent, text_mentioning(mentioned_user))
+        end
+
+        expect(notifications_about_mentioning(mentioned_user, comment).count).to eq(1)
       end
     end
   end

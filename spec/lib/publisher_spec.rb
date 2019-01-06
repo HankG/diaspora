@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe Publisher do
   before do
     @publisher = Publisher.new(alice)
@@ -10,13 +12,6 @@ describe Publisher do
 
     it 'is settable' do
       expect(Publisher.new(alice, :prefill => "party!").prefill).to eq("party!")
-    end
-  end
-
-  describe '#text' do
-    it 'is a formatted version of the prefill' do
-      p = Publisher.new(alice, prefill: "@{alice; #{alice.diaspora_handle}}")
-      expect(p.text).to eq("alice")
     end
   end
 

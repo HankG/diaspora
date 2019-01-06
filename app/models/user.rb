@@ -1,8 +1,10 @@
+# frozen_string_literal: true
+
 #   Copyright (c) 2010-2011, Diaspora Inc.  This file is
 #   licensed under the Affero General Public License version 3 or later.  See
 #   the COPYRIGHT file.
 
-class User < ActiveRecord::Base
+class User < ApplicationRecord
   include AuthenticationToken
   include Connecting
   include Querying
@@ -30,7 +32,7 @@ class User < ActiveRecord::Base
   validates_length_of :username, :maximum => 32
   validates_exclusion_of :username, :in => AppConfig.settings.username_blacklist
   validates_inclusion_of :language, :in => AVAILABLE_LANGUAGE_CODES
-  validates :color_theme, inclusion: {in: AVAILABLE_COLOR_THEME_CODES}, allow_blank: true
+  validates :color_theme, inclusion: {in: AVAILABLE_COLOR_THEMES}, allow_blank: true
   validates_format_of :unconfirmed_email, :with  => Devise.email_regexp, :allow_blank => true
 
   validate :unconfirmed_email_quasiuniqueness
@@ -46,13 +48,15 @@ class User < ActiveRecord::Base
 
   delegate :guid, :public_key, :posts, :photos, :owns?, :image_url,
            :diaspora_handle, :name, :atom_url, :profile_url, :profile, :url,
-           :first_name, :last_name, :gender, :participations, to: :person
+           :first_name, :last_name, :full_name, :gender, :participations, to: :person
   delegate :id, :guid, to: :person, prefix: true
 
   has_many :aspects, -> { order('order_id ASC') }
 
-  belongs_to  :auto_follow_back_aspect, :class_name => 'Aspect'
-  belongs_to :invited_by, :class_name => 'User'
+  belongs_to :auto_follow_back_aspect, class_name: "Aspect", optional: true
+  belongs_to :invited_by, class_name: "User", optional: true
+
+  has_many :invited_users, class_name: "User", inverse_of: :invited_by, foreign_key: :invited_by_id
 
   has_many :aspect_memberships, :through => :aspects
 
@@ -85,6 +89,10 @@ class User < ActiveRecord::Base
   before_save :guard_unconfirmed_email
 
   after_save :remove_invalid_unconfirmed_emails
+
+  before_destroy do
+    raise "Never destroy users!"
+  end
 
   def self.all_sharing_with_person(person)
     User.joins(:contacts).where(:contacts => {:person_id => person.id})
@@ -174,7 +182,7 @@ class User < ActiveRecord::Base
       if pref_hash[key] == 'true'
         self.user_preferences.find_or_create_by(email_type: key)
       else
-        block = self.user_preferences.where(:email_type => key).first
+        block = user_preferences.find_by(email_type: key)
         if block
           block.destroy
         end
@@ -268,10 +276,6 @@ class User < ActiveRecord::Base
     end
   end
 
-  def salmon(post)
-    Salmon::EncryptedSlap.create_by_user_and_activity(self, post.to_diaspora_xml)
-  end
-
   # Check whether the user has liked a post.
   # @param [Post] post
   def liked?(target)
@@ -291,9 +295,9 @@ class User < ActiveRecord::Base
   # @return [Like]
   def like_for(target)
     if target.likes.loaded?
-      return target.likes.detect{ |like| like.author_id == self.person.id }
+      target.likes.find {|like| like.author_id == person.id }
     else
-      return Like.where(:author_id => self.person.id, :target_type => target.class.base_class.to_s, :target_id => target.id).first
+      Like.find_by(author_id: person.id, target_type: target.class.base_class.to_s, target_id: target.id)
     end
   end
 
@@ -301,18 +305,22 @@ class User < ActiveRecord::Base
   mount_uploader :export, ExportedUser
 
   def queue_export
-    update exporting: true
+    update exporting: true, export: nil, exported_at: nil
     Workers::ExportUser.perform_async(id)
   end
 
   def perform_export!
-    export = Tempfile.new([username, '.json.gz'], encoding: 'ascii-8bit')
+    export = Tempfile.new([username, ".json.gz"], encoding: "ascii-8bit")
     export.write(compressed_export) && export.close
     if export.present?
       update exporting: false, export: export, exported_at: Time.zone.now
     else
       update exporting: false
     end
+  rescue => error
+    logger.error "Unexpected error while exporting user '#{username}': #{error.class}: #{error.message}\n" \
+                 "#{error.backtrace.first(15).join("\n")}"
+    update exporting: false
   end
 
   def compressed_export
@@ -323,12 +331,16 @@ class User < ActiveRecord::Base
   mount_uploader :exported_photos_file, ExportedPhotos
 
   def queue_export_photos
-    update exporting_photos: true
+    update exporting_photos: true, exported_photos_file: nil, exported_photos_at: nil
     Workers::ExportPhotos.perform_async(id)
   end
 
   def perform_export_photos!
     PhotoExporter.new(self).perform
+  rescue => error
+    logger.error "Unexpected error while exporting photos for '#{username}': #{error.class}: #{error.message}\n" \
+                 "#{error.backtrace.first(15).join("\n")}"
+    update exporting_photos: false
   end
 
   ######### Mailer #######################
@@ -347,7 +359,7 @@ class User < ActiveRecord::Base
 
   ######### Posts and Such ###############
   def retract(target)
-    retraction = Retraction.for(target, self)
+    retraction = Retraction.for(target)
     retraction.defer_dispatch(self)
     retraction.perform
   end
@@ -432,6 +444,7 @@ class User < ActiveRecord::Base
     return unless AppConfig.settings.welcome_message.enabled? && AppConfig.admins.account?
     sender_username = AppConfig.admins.account.get
     sender = User.find_by(username: sender_username)
+    return if sender.nil?
     conversation = sender.build_conversation(
       participant_ids: [sender.person.id, person.id],
       subject:         AppConfig.settings.welcome_message.subject.get,
@@ -451,6 +464,14 @@ class User < ActiveRecord::Base
 
   def moderator?
     Role.moderator?(person)
+  end
+
+  def moderator_only?
+    Role.moderator_only?(person)
+  end
+
+  def spotlight?
+    Role.spotlight?(person)
   end
 
   def podmin_account?
@@ -476,14 +497,17 @@ class User < ActiveRecord::Base
   def guard_unconfirmed_email
     self.unconfirmed_email = nil if unconfirmed_email.blank? || unconfirmed_email == email
 
-    if unconfirmed_email_changed?
-      self.confirm_email_token = unconfirmed_email ? SecureRandom.hex(15) : nil
-    end
+    return unless will_save_change_to_unconfirmed_email?
+
+    self.confirm_email_token = unconfirmed_email ? SecureRandom.hex(15) : nil
   end
 
   # Whenever email is set, clear all unconfirmed emails which match
   def remove_invalid_unconfirmed_emails
-    User.where(unconfirmed_email: email).update_all(unconfirmed_email: nil, confirm_email_token: nil) if email_changed?
+    return unless saved_change_to_email?
+    # rubocop:disable Rails/SkipsModelValidations
+    User.where(unconfirmed_email: email).update_all(unconfirmed_email: nil, confirm_email_token: nil)
+    # rubocop:enable Rails/SkipsModelValidations
   end
 
   # Generate public/private keys for User and associated Person
@@ -507,7 +531,7 @@ class User < ActiveRecord::Base
   def close_account!
     self.person.lock_access!
     self.lock_access!
-    AccountDeletion.create(:person => self.person)
+    AccountDeletion.create(person: person)
   end
 
   def closed_account?
@@ -523,6 +547,8 @@ class User < ActiveRecord::Base
      :post_default_public].each do |field|
       self[field] = false
     end
+    self.remove_export = true
+    self.remove_exported_photos_file = true
     self[:disable_mail] = true
     self[:strip_exif] = true
     self[:email] = "deletedaccount_#{self[:id]}@example.org"
@@ -563,7 +589,7 @@ class User < ActiveRecord::Base
     attributes.keys - %w(id username encrypted_password created_at updated_at locked_at
                          serialized_private_key getting_started
                          disable_mail show_community_spotlight_in_stream
-                         strip_exif email remove_after export exporting exported_at
-                         exported_photos_file exporting_photos exported_photos_at)
+                         strip_exif email remove_after export exporting
+                         exported_photos_file exporting_photos)
   end
 end

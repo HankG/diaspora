@@ -1,6 +1,6 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-v3-or-Later
 
-app.views.ConversationsForm = Backbone.View.extend({
+app.views.ConversationsForm = app.views.Base.extend({
   el: ".conversations-form-container",
 
   events: {
@@ -24,6 +24,8 @@ app.views.ConversationsForm = Backbone.View.extend({
       remoteRoute: {url: "/contacts", extraParameters: "mutual=true"}
     });
 
+    this.newConversationMdEditor = this.renderMarkdownEditor("#new-message-text");
+
     this.bindTypeaheadEvents();
 
     this.tagListElement.empty();
@@ -31,20 +33,32 @@ app.views.ConversationsForm = Backbone.View.extend({
       this.prefill(opts.prefill);
     }
 
-    this.$("form#new-conversation").on("ajax:success", this.conversationCreateSuccess);
+    this.$("form#new-conversation").on("ajax:success", this.conversationCreateSuccess.bind(this));
     this.$("form#new-conversation").on("ajax:error", this.conversationCreateError);
+  },
+
+  renderMarkdownEditor: function(element) {
+    return new Diaspora.MarkdownEditor($(element), {
+      onPreview: Diaspora.MarkdownEditor.simplePreview
+    });
   },
 
   addRecipient: function(person) {
     this.conversationRecipients.push(person);
     this.updateContactIdsListInput();
     /* eslint-disable camelcase */
-    this.tagListElement.append(HandlebarsTemplates.conversation_recipient_tag_tpl(person));
+    var personEl = $(HandlebarsTemplates.conversation_recipient_tag_tpl(person)).appendTo(this.tagListElement);
     /* eslint-enable camelcase */
+    this.setupAvatarFallback(personEl);
   },
 
-  prefill: function(handles) {
-    handles.forEach(this.addRecipient.bind(this));
+  prefill: function(people) {
+    people.forEach(function(person) {
+      this.addRecipient(_.extend({
+        avatar: person.get("profile").avatar.small,
+        handle: person.get("diaspora_id")
+      }, person.attributes));
+    }, this);
   },
 
   updateContactIdsListInput: function() {
@@ -65,7 +79,7 @@ app.views.ConversationsForm = Backbone.View.extend({
   },
 
   keyDown: function(evt) {
-    if (evt.which === Keycodes.ENTER && evt.ctrlKey) {
+    if (evt.which === Keycodes.ENTER && (evt.metaKey || evt.ctrlKey)) {
       $(evt.target).parents("form").submit();
     }
   },
@@ -83,6 +97,7 @@ app.views.ConversationsForm = Backbone.View.extend({
   },
 
   conversationCreateSuccess: function(evt, data) {
+    this.newConversationMdEditor.hidePreview();
     app._changeLocation(Routes.conversation(data.id));
   },
 

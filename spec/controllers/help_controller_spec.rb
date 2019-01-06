@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 describe HelpController, type: :controller do
   describe "#faq" do
     it "succeeds" do
@@ -8,7 +10,7 @@ describe HelpController, type: :controller do
     it "fails on mobile" do
       expect {
         get :faq, format: :mobile
-      }.to raise_error ActionView::MissingTemplate
+      }.to raise_error ActionController::UnknownFormat
     end
   end
 end

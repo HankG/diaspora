@@ -8,7 +8,7 @@
         = render "contacts/sidebar"
 
     .col-md-9
-      .stream.contacts.framed-content#people_stream
+      .stream.contacts.framed-content#people-stream
         = render "contacts/header"
 
         - if @contacts_size > 0
@@ -27,7 +27,7 @@
                 != t(".no_contacts_message",
                      community_spotlight: link_to(t(".community_spotlight"), community_spotlight_path))
             %p
-              .btn.btn-link{"data-toggle" => "modal"}
+              .btn.btn-link.invitations-button{"data-toggle" => "modal"}
                 = t("invitations.new.invite_someone_to_join")
 
       #paginate

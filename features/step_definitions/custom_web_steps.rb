@@ -1,3 +1,5 @@
+# frozen_string_literal: true
+
 module ScreenshotCukeHelpers
 
   def set_screenshot_location(path)
@@ -12,8 +14,8 @@ module ScreenshotCukeHelpers
 
     sleep 0.5
 
-    browser.manage.window.resize_to(1280, 1024)
-    browser.save_screenshot(pic)
+    page.driver.resize(1280, 1024)
+    save_screenshot(pic)
   end
 
   def take_screenshots_without_login
@@ -29,16 +31,15 @@ module ScreenshotCukeHelpers
 
   def take_screenshots_with_login
     pages = {
-      'stream'        => 'stream',
-      'activity'      => 'activity_stream',
-      'mentions'      => 'mentioned_stream',
-      'aspects'       => 'aspects_stream',
-      'tags'          => 'followed_tags_stream',
-      'contacts'      => 'contacts',
-      'settings'      => 'edit_user',
-      'notifications' => 'notifications',
-      'conversations' => 'conversations',
-      'logout'        => 'destroy_user_session'
+      "stream"        => "stream",
+      "activity"      => "activity_stream",
+      "mentions"      => "mentioned_stream",
+      "aspects"       => "aspects_stream",
+      "tags"          => "followed_tags_stream",
+      "contacts"      => "contacts",
+      "settings"      => "edit_user",
+      "notifications" => "notifications",
+      "conversations" => "conversations"
     }
 
     pages.each do |name, path|
@@ -73,7 +74,7 @@ Then /^the publisher should be expanded$/ do
 end
 
 Then /^the text area wrapper mobile should be with attachments$/ do
-  find("#publisher_textarea_wrapper")["class"].should include("with_attachments")
+  find("#publisher-textarea-wrapper")["class"].should include("with_attachments")
 end
 
 And /^I want to mention (?:him|her) from the profile$/ do
@@ -109,6 +110,7 @@ When /^I click to delete the first post$/ do
   accept_alert do
     step "I prepare the deletion of the first post"
   end
+  expect(find(".stream")).to have_no_css(".stream-element.loaded.deleting")
 end
 
 When /^I click to hide the first post$/ do
@@ -125,7 +127,9 @@ end
 
 When /^I click to delete the first uploaded photo$/ do
   page.execute_script("$('#photodropzone .x').css('display', 'block');")
+  image_count = all(".publisher_photo img", wait: false).count
   find("#photodropzone .x", match: :first).trigger "click"
+  page.assert_selector(".publisher_photo img", count: image_count - 1)
 end
 
 And /^I click on selector "([^"]*)"$/ do |selector|
@@ -180,6 +184,12 @@ Then /^(?:|I )should see a "([^\"]*)"(?: within "([^\"]*)")?$/ do |selector, sco
   end
 end
 
+Then /^I should see (\d+) "([^\"]*)"(?: within "([^\"]*)")?$/ do |count, selector, scope_selector|
+  with_scope(scope_selector) do
+    expect(current_scope).to have_selector(selector, count: count)
+  end
+end
+
 Then /^(?:|I )should not see a "([^\"]*)"(?: within "([^\"]*)")?$/ do |selector, scope_selector|
   with_scope(scope_selector) do
     current_scope.should have_no_css(selector, :visible => true)
@@ -204,7 +214,7 @@ Then /^the "([^"]*)" field(?: within "([^"]*)")? should be filled with "([^"]*)"
 end
 
 Then /^I should see (\d+) contacts$/ do |n_posts|
-  has_css?("#people_stream .stream-element", count: n_posts.to_i).should be true
+  has_css?("#people-stream .stream-element", count: n_posts.to_i).should be true
 end
 
 And /^I scroll down$/ do
@@ -220,11 +230,11 @@ When /^I resize my window to 800x600$/ do
 end
 
 Then 'I should see an image attached to the post' do
-  step %(I should see a "img" within ".stream-element div.photo_attachments")
+  step %(I should see a "img" within ".stream-element div.photo-attachments")
 end
 
 Then 'I press the attached image' do
-  step %(I press the 1st "img" within ".stream-element div.photo_attachments")
+  step %(I press the 1st "img" within ".stream-element div.photo-attachments")
 end
 
 And "I wait for the popovers to appear" do
@@ -286,6 +296,14 @@ end
 
 Then /^I should see the Bitcoin address$/ do
   find("#bitcoin_address")['value'].should == "AAAAAA"
+end
+
+Given /^I have configured a Liberapay username$/ do
+  AppConfig.settings.liberapay_username = "BBBBBB"
+end
+
+Then /^I should see the Liberapay donate button$/ do
+  find("#liberapay-button")["href"].should == "https://liberapay.com/BBBBBB/donate"
 end
 
 Given /^"([^"]*)" is hidden$/ do |selector|
